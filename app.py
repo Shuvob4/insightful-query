@@ -102,6 +102,10 @@ def display_ui():
 
     # Use local variables to hold intermediate results instead of session state
     if generate_relevant_text_button:
+        # Reset or clear previous values stored in session state before processing
+        st.session_state['output_text'] = ""
+        st.session_state['final_answer'] = ""
+        
         relevant_text = get_text_snippet(context_input, question_input)
         if "The model could not find an answer in the context provided." not in relevant_text:
             result = get_answer_from_context(relevant_text, question_input)
