@@ -5,7 +5,7 @@ from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from langchain import OpenAI, VectorDBQA
 
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"
 
 # Function for creating relevant context
 def get_text_snippet(text, question, window_size=500):
