@@ -10,3 +10,4 @@ langchain-openai
 tensorflow
 tf-keras
 pysqlite3-binary
+torch
