@@ -2,7 +2,7 @@ __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
-from transformers import AutoModelForQuestionAnswering, AutoTokenizer, pipeline
+from transformers import pipeline
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
@@ -11,14 +11,9 @@ from langchain import OpenAI, VectorDBQA
 OPENAI_API_KEY = st.secrets["openai_api_key"]
 
 # Function for creating relevant context
-def get_text_snippet(text, question, window_size=1000):
-    # defining a pretrained model
-    model_name = "deepset/roberta-base-squad2"
-    model = AutoModelForQuestionAnswering.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-
+def get_text_snippet(text, question, window_size=500):
     # Load a pre-trained QA model and tokenizer
-    qa_pipeline = pipeline("question-answering", model = model, tokenizer = tokenizer)
+    qa_pipeline = pipeline("question-answering")
 
     # Prepare the inputs for the model
     inputs = {
@@ -95,50 +90,37 @@ def get_answer_from_context(context, question):
 def display_ui():
     # Setting up the web page
     st.set_page_config(page_title="Extractive Question Answering System",
-                    layout='centered',
-                    initial_sidebar_state='collapsed')
+                       layout='centered',
+                       initial_sidebar_state='collapsed')
 
     st.header("Extractive Question Answering System")
 
     question_input = st.text_area("Enter Your Question here", key="question_input")
-    context_input = st.text_area("Enter Your Context here",  height=300, key="context_input")
+    context_input = st.text_area("Enter Your Context here", height=300, key="context_input")
 
     generate_relevant_text_button = st.button("Get Relevant Text")
 
-    # Initialize or ensure session state variables exist
-    if 'output_text' not in st.session_state:
-        st.session_state['output_text'] = ""
-    if 'display_final_answer' not in st.session_state:
-        st.session_state['display_final_answer'] = False
-
-    # Action for "Get Relevant Text" button
+    # Use local variables to hold intermediate results instead of session state
     if generate_relevant_text_button:
-        # Reset the previous states before updating with new values
-        st.session_state['output_text'] = ""  # Clear previous output_text
-        st.session_state['display_final_answer'] = False  # Ensure display_final_answer is reset
-        
-        # Generate and store the relevant text in session state
-        # This is where you would call your function to generate the relevant text snippet
-        st.session_state['output_text'] = get_text_snippet(context_input, question_input)
-        # Assuming you also want to reset any potential final answer from a previous run
-        # You might want to ensure that any related state is also reset or cleared here
+        relevant_text = get_text_snippet(context_input, question_input)
+        if "The model could not find an answer in the context provided." not in relevant_text:
+            result = get_answer_from_context(relevant_text, question_input)
+            final_answer = result['result'].strip()  # Assuming result['result'] contains the final answer
+        else:
+            relevant_text = ""
+            final_answer = ""
 
-    # Always display the output text area if there's something to show
-    if st.session_state['output_text']:
-        st.text_area("Result", value=st.session_state['output_text'], height=250, disabled=True, key="output_result")
+        # Use local variables to update session state directly
+        st.session_state['output_text'] = relevant_text
+        st.session_state['final_answer'] = final_answer
 
-        # Condition for displaying the "Generate Final Answer" button
-        if "The model could not find an answer in the context provided." not in st.session_state['output_text']:
-            if st.button('Generate Final Answer', key='generate_final_answer'):
-                st.session_state['display_final_answer'] = True  # Flag to display the final answer and score
+    # Display the relevant text
+    if 'output_text' in st.session_state and st.session_state['output_text']:
+        st.text_area("Relevant Text", value=st.session_state['output_text'], height=250, disabled=True, key="output_result")
 
-    # Display final answer and score if the flag is set
-    if st.session_state['display_final_answer']:
-        # Generate the final answer based on the relevant text and the question
-        result = get_answer_from_context(st.session_state['output_text'], question_input)
-        answer = result['result']  # Safely get the 'answer' if it exists
-        answer = answer.strip()
-        print(answer)
-        st.text_area("Final Answer:", value=str(answer), height=300, disabled=True, key="final_answer")
-        
+    # Display the final answer
+    if 'final_answer' in st.session_state and st.session_state['final_answer']:
+        st.text_area("Final Answer:", value=st.session_state['final_answer'], height=300, disabled=True, key="final_answer_display")
+
+
 display_ui()
