@@ -13,7 +13,7 @@ OPENAI_API_KEY = st.secrets["openai_api_key"]
 # Function for creating relevant context
 def get_text_snippet(text, question, window_size=500):
     # Load a pre-trained QA model and tokenizer
-    qa_pipeline = pipeline("question-answering")
+    qa_pipeline = pipeline("question-answering", model="distilbert/distilbert-base-cased-distilled-squad")
 
     # Prepare the inputs for the model
     inputs = {
@@ -84,6 +84,7 @@ def get_answer_from_context(context, question):
     )
     
     answer = eqa.invoke(question)
+    docsearch.delete_collection()
     return answer
 
 # Streamlit UI
